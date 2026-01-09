@@ -3,6 +3,14 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '../store';
 import { GoogleGenAI } from "@google/genai";
 
+// 显式声明 process 以通过 TypeScript 编译检查
+declare var process: {
+  env: {
+    API_KEY: string;
+    [key: string]: string | undefined;
+  };
+};
+
 interface AnalysisPanelProps {
   onClose: () => void;
 }
