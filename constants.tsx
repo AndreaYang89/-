@@ -1,7 +1,8 @@
 
-import { Asset, Group, GlobalSettings, ViewMode } from './types';
+import { Asset, Group, GlobalSettings, Tag } from './types';
 
 export const INITIAL_SETTINGS: GlobalSettings = {
+  plannedTotal: 500000,
   aSharePool: 240000,
   globalPool: 100000,
   cashUSD: 15000,
@@ -10,14 +11,21 @@ export const INITIAL_SETTINGS: GlobalSettings = {
   jpyRate: 0.047
 };
 
+export const INITIAL_TAGS: Tag[] = [
+  { id: 'tag-growth', name: '高增长', color: 'rose' },
+  { id: 'tag-value', name: '价值股', color: 'blue' },
+  { id: 'tag-dividend', name: '高股息', color: 'emerald' },
+  { id: 'tag-hedge', name: '避险', color: 'amber' }
+];
+
 export const INITIAL_ASSETS: Asset[] = [
-  { id: 'zijin', name: '紫金矿业', value: 10365 },
-  { id: 'youose', name: '有色ETF', value: 0 },
-  { id: 'gold', name: '黄金ETF', value: 7052 },
-  { id: 'kechuang', name: '科创50', value: 15400 },
-  { id: 'chip', name: '芯片ETF', value: 12012 },
-  { id: 'nvda', name: 'NVDA', value: 18000 },
-  { id: 'qqq', name: 'QQQ', value: 9000 }
+  { id: 'zijin', name: '紫金矿业', value: 10365, targetPercent: 8, tagIds: ['tag-value', 'tag-hedge'] },
+  { id: 'youose', name: '有色ETF', value: 0, targetPercent: 5, tagIds: ['tag-growth'] },
+  { id: 'gold', name: '黄金ETF', value: 7052, targetPercent: 6, tagIds: ['tag-hedge'] },
+  { id: 'kechuang', name: '科创50', value: 15400, targetPercent: 12, tagIds: ['tag-growth'] },
+  { id: 'chip', name: '芯片ETF', value: 12012, targetPercent: 10, tagIds: ['tag-growth'] },
+  { id: 'nvda', name: 'NVDA', value: 18000, targetPercent: 15, tagIds: ['tag-growth'] },
+  { id: 'qqq', name: 'QQQ', value: 9000, targetPercent: 8, tagIds: ['tag-growth', 'tag-value'] }
 ];
 
 export const INITIAL_GROUPS: Group[] = [

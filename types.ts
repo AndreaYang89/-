@@ -1,10 +1,18 @@
 
 export type ViewMode = 'structural' | 'attribution';
 
+export interface Tag {
+  id: string;
+  name: string;
+  color: string; // Tailwind color name like 'rose', 'blue', etc.
+}
+
 export interface Asset {
   id: string;
   name: string;
   value: number;
+  targetPercent: number; // Allocation target relative to the total portfolio
+  tagIds?: string[];
 }
 
 export interface Group {
@@ -18,6 +26,7 @@ export interface Group {
 }
 
 export interface GlobalSettings {
+  plannedTotal: number; // The user-defined target total portfolio size
   aSharePool: number;
   globalPool: number;
   cashUSD: number;
@@ -30,5 +39,6 @@ export interface AppState {
   settings: GlobalSettings;
   assets: Asset[];
   groups: Group[];
+  tags: Tag[];
   activeView: ViewMode;
 }
