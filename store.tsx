@@ -15,7 +15,9 @@ interface AppContextType {
   deleteAssetFromGroup: (groupId: string, assetId: string) => void;
   addTagToAsset: (assetId: string, tagId: string) => void;
   removeTagFromAsset: (assetId: string, tagId: string) => void;
+  addAllTagsToAsset: (assetId: string) => void;
   createTag: (name: string, color: string) => void;
+  updateTag: (tagId: string, name: string, color: string) => void;
   deleteTag: (tagId: string) => void;
   setViewMode: (mode: ViewMode) => void;
   isSaving: boolean;
@@ -33,7 +35,6 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | null>(null);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Load initial state from LocalStorage or use defaults
   const loadSavedState = () => {
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -55,15 +56,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [activeView, setViewMode] = useState<ViewMode>('attribution');
   const [isSaving, setIsSaving] = useState(false);
 
-  // Auto-save effect with debounce
   useEffect(() => {
     setIsSaving(true);
     const handler = setTimeout(() => {
       const dataToSave = { settings, assets, groups, tags };
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(dataToSave));
       setIsSaving(false);
-      console.log('State auto-saved to local storage');
-    }, 1500); // 1.5s debounce to prevent excessive writes
+    }, 1500);
 
     return () => clearTimeout(handler);
   }, [settings, assets, groups, tags]);
@@ -103,9 +102,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAssets(prev => prev.map(a => a.id === assetId ? { ...a, tagIds: (a.tagIds || []).filter(id => id !== tagId) } : a));
   }, []);
 
+  const addAllTagsToAsset = useCallback((assetId: string) => {
+    setAssets(prev => prev.map(a => a.id === assetId ? { ...a, tagIds: tags.map(t => t.id) } : a));
+  }, [tags]);
+
   const createTag = useCallback((name: string, color: string) => {
     const newTag: Tag = { id: `tag-${Date.now()}`, name, color };
     setTags(prev => [...prev, newTag]);
+  }, []);
+
+  const updateTag = useCallback((tagId: string, name: string, color: string) => {
+    setTags(prev => prev.map(t => t.id === tagId ? { ...t, name, color } : t));
   }, []);
 
   const deleteTag = useCallback((tagId: string) => {
@@ -148,8 +155,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const value = {
     state: { settings, assets, groups, tags, activeView },
     updateSettings, updateAsset, updateAssetTarget, updateGroupTarget,
-    addAssetToGroup, deleteAssetFromGroup, addTagToAsset, removeTagFromAsset,
-    createTag, deleteTag, setViewMode, isSaving, calculated
+    addAssetToGroup, deleteAssetFromGroup, addTagToAsset, removeTagFromAsset, addAllTagsToAsset,
+    createTag, updateTag, deleteTag, setViewMode, isSaving, calculated
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

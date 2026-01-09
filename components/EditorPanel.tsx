@@ -11,10 +11,17 @@ interface EditorPanelProps {
 const COLOR_OPTIONS = ['rose', 'blue', 'emerald', 'amber', 'indigo', 'orange', 'purple', 'slate'];
 
 const EditorPanel: React.FC<EditorPanelProps> = ({ group, onClose }) => {
-  const { state, updateAsset, updateAssetTarget, updateGroupTarget, addAssetToGroup, deleteAssetFromGroup, addTagToAsset, removeTagFromAsset, createTag, calculated, isSaving } = useApp();
+  const { 
+    state, updateAsset, updateAssetTarget, updateGroupTarget, 
+    addAssetToGroup, deleteAssetFromGroup, addTagToAsset, 
+    removeTagFromAsset, addAllTagsToAsset, createTag, updateTag, deleteTag, 
+    calculated, isSaving 
+  } = useApp();
+
   const [newAssetName, setNewAssetName] = useState('');
-  const [newTagName, setNewTagName] = useState('');
+  const [tagName, setTagName] = useState('');
   const [selectedColor, setSelectedColor] = useState('indigo');
+  const [editingTagId, setEditingTagId] = useState<string | null>(null);
   const [showTagCreator, setShowTagCreator] = useState(false);
   
   const metrics = calculated.groupMetrics[group.id];
@@ -29,13 +36,30 @@ const EditorPanel: React.FC<EditorPanelProps> = ({ group, onClose }) => {
     }
   };
 
-  const handleCreateTag = (e: React.FormEvent) => {
+  const handleSaveTag = (e: React.FormEvent) => {
     e.preventDefault();
-    if (newTagName.trim()) {
-      createTag(newTagName.trim(), selectedColor);
-      setNewTagName('');
-      setShowTagCreator(false);
+    if (tagName.trim()) {
+      if (editingTagId) {
+        updateTag(editingTagId, tagName.trim(), selectedColor);
+      } else {
+        createTag(tagName.trim(), selectedColor);
+      }
+      resetTagForm();
     }
+  };
+
+  const resetTagForm = () => {
+    setTagName('');
+    setEditingTagId(null);
+    setShowTagCreator(false);
+    setSelectedColor('indigo');
+  };
+
+  const startEditTag = (tag: Tag) => {
+    setEditingTagId(tag.id);
+    setTagName(tag.name);
+    setSelectedColor(tag.color);
+    setShowTagCreator(true);
   };
 
   return (
@@ -90,16 +114,30 @@ const EditorPanel: React.FC<EditorPanelProps> = ({ group, onClose }) => {
             onClick={() => setShowTagCreator(!showTagCreator)}
             className="text-[10px] font-black uppercase text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-full active:scale-95 transition-transform"
           >
-            {showTagCreator ? '关闭' : '+ 新建'}
+            {showTagCreator ? '取消' : '+ 新建'}
           </button>
         </div>
 
         {showTagCreator && (
-          <form onSubmit={handleCreateTag} className="p-4 bg-white rounded-2xl border border-indigo-100 mb-4 space-y-4 animate-in slide-in-from-top-2 shadow-sm">
+          <form onSubmit={handleSaveTag} className="p-4 bg-white rounded-2xl border border-indigo-100 mb-4 space-y-4 animate-in slide-in-from-top-2 shadow-sm">
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                {editingTagId ? '正在编辑标签' : '创建新标签'}
+              </span>
+              {editingTagId && (
+                <button 
+                  type="button" 
+                  onClick={() => { if(confirm('确定删除此标签吗？')) { deleteTag(editingTagId); resetTagForm(); } }}
+                  className="text-[10px] font-bold text-rose-500 uppercase"
+                >
+                  删除标签
+                </button>
+              )}
+            </div>
             <input 
               type="text"
-              value={newTagName}
-              onChange={(e) => setNewTagName(e.target.value)}
+              value={tagName}
+              onChange={(e) => setTagName(e.target.value)}
               placeholder="标签名称..."
               className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500"
             />
@@ -117,18 +155,23 @@ const EditorPanel: React.FC<EditorPanelProps> = ({ group, onClose }) => {
             </div>
             <button 
               type="submit"
-              className="w-full bg-indigo-600 text-white py-3 rounded-xl font-black text-sm shadow-lg shadow-indigo-100"
+              className="w-full bg-indigo-600 text-white py-3 rounded-xl font-black text-sm shadow-lg shadow-indigo-100 active:scale-95 transition-transform"
             >
-              创建新标签
+              {editingTagId ? '保存修改' : '创建标签'}
             </button>
           </form>
         )}
 
         <div className="flex flex-wrap gap-2">
           {state.tags.map(tag => (
-             <span key={tag.id} className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase bg-${tag.color}-100 text-${tag.color}-700 border border-${tag.color}-200/50`}>
+             <button 
+               key={tag.id} 
+               onClick={() => startEditTag(tag)}
+               className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase bg-${tag.color}-100 text-${tag.color}-700 border border-${tag.color}-200/50 active:scale-95 transition-transform flex items-center gap-1.5`}
+             >
                 {tag.name}
-             </span>
+                <svg className="w-2.5 h-2.5 opacity-40" fill="currentColor" viewBox="0 0 24 24"><path d="M7.127 22.562l-7.127 1.438 1.438-7.128 5.689 5.69zm1.414-1.414l11.228-11.225-5.69-5.692-11.227 11.227 5.689 5.69zm9.768-21.148l-2.816 2.817 5.691 5.691 2.816-2.819-5.691-5.689z"/></svg>
+             </button>
           ))}
         </div>
       </section>
@@ -154,11 +197,11 @@ const EditorPanel: React.FC<EditorPanelProps> = ({ group, onClose }) => {
               <div key={asset.id} className="bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                 {/* Asset Header */}
                 <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex justify-between items-start">
-                  <div className="space-y-2">
+                  <div className="space-y-2 flex-1 mr-4">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-black text-slate-900">{asset.name}</span>
                       <button 
-                        onClick={() => deleteAssetFromGroup(group.id, asset.id)}
+                        onClick={() => { if(confirm(`确定从板块中移除 ${asset.name} 吗？`)) deleteAssetFromGroup(group.id, asset.id); }}
                         className="p-1 text-slate-300 hover:text-rose-500 transition-colors"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -178,21 +221,31 @@ const EditorPanel: React.FC<EditorPanelProps> = ({ group, onClose }) => {
                           </span>
                         );
                       })}
-                      <select 
-                        className="appearance-none bg-slate-200 text-slate-500 text-[8px] font-black uppercase px-2 py-0.5 rounded-lg border-none focus:ring-0 cursor-pointer"
-                        onChange={(e) => {
-                          if (e.target.value) addTagToAsset(asset.id, e.target.value);
-                          e.target.value = "";
-                        }}
-                      >
-                        <option value="">+ 贴标</option>
-                        {state.tags.filter(t => !asset.tagIds?.includes(t.id)).map(t => (
-                          <option key={t.id} value={t.id}>{t.name}</option>
-                        ))}
-                      </select>
+                      
+                      <div className="flex gap-1 items-center">
+                        <select 
+                          className="appearance-none bg-slate-200 text-slate-500 text-[8px] font-black uppercase px-2 py-0.5 rounded-lg border-none focus:ring-0 cursor-pointer"
+                          onChange={(e) => {
+                            if (e.target.value) addTagToAsset(asset.id, e.target.value);
+                            e.target.value = "";
+                          }}
+                        >
+                          <option value="">+ 贴标</option>
+                          {state.tags.filter(t => !asset.tagIds?.includes(t.id)).map(t => (
+                            <option key={t.id} value={t.id}>{t.name}</option>
+                          ))}
+                        </select>
+
+                        <button 
+                          onClick={() => addAllTagsToAsset(asset.id)}
+                          className="bg-indigo-100 text-indigo-600 text-[8px] font-black uppercase px-2 py-0.5 rounded-lg active:scale-95 transition-transform"
+                        >
+                          全选
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right shrink-0">
                     <div className="text-[9px] font-bold text-slate-400 uppercase mb-0.5">现持有占比</div>
                     <div className="text-sm font-black text-slate-900">{actualPercent.toFixed(1)}%</div>
                   </div>
@@ -242,7 +295,6 @@ const EditorPanel: React.FC<EditorPanelProps> = ({ group, onClose }) => {
                     <div className="text-[10px] font-black text-slate-900 leading-none">{progress.toFixed(0)}%</div>
                   </div>
                   
-                  {/* The integrated progress bar below the target values */}
                   <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
                     <div 
                       className={`h-full transition-all duration-700 ease-out ${gapStatus === 'under' ? 'bg-rose-400' : 'bg-emerald-400'}`}
@@ -304,7 +356,6 @@ const EditorPanel: React.FC<EditorPanelProps> = ({ group, onClose }) => {
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
               </button>
               
-              {/* Saving status indicator */}
               <div className="flex items-center gap-1.5">
                 <div className={`w-1.5 h-1.5 rounded-full ${isSaving ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`} />
                 <span className="text-[8px] font-black uppercase opacity-60 tracking-wider">
