@@ -12,6 +12,8 @@ interface AppContextType {
   updateAssetTarget: (id: string, targetPercent: number) => void;
   updateGroupTarget: (id: string, targetPercent: number) => void;
   updateGroupTags: (groupId: string, tagIds: string[]) => void;
+  createGroup: (name: string, viewType: ViewMode) => void;
+  deleteGroup: (groupId: string) => void;
   addAssetToGroup: (groupId: string, name: string) => void;
   deleteAssetFromGroup: (groupId: string, assetId: string) => void;
   addTagToAsset: (assetId: string, tagId: string) => void;
@@ -68,6 +70,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateGroupTarget = useCallback((id: string, targetPercent: number) => setGroups(prev => prev.map(g => g.id === id ? { ...g, targetPercent } : g)), []);
   const updateGroupTags = useCallback((groupId: string, tagIds: string[]) => setGroups(prev => prev.map(g => g.id === groupId ? { ...g, tagIds } : g)), []);
 
+  const createGroup = useCallback((name: string, viewType: ViewMode) => {
+    const colors = ['amber', 'indigo', 'red', 'blue', 'purple', 'emerald'];
+    const themeColor = colors[groups.length % colors.length];
+    const newGroup: Group = {
+      id: `group-${Date.now()}`,
+      name,
+      description: viewType === 'attribution' ? '自动根据标签聚合资产' : '手动配置资产列表',
+      targetPercent: 0,
+      assetIds: [],
+      tagIds: [],
+      themeColor,
+      viewType
+    };
+    setGroups(prev => [...prev, newGroup]);
+  }, [groups]);
+
+  const deleteGroup = useCallback((groupId: string) => {
+    setGroups(prev => prev.filter(g => g.id !== groupId));
+  }, []);
+
   const addAssetToGroup = useCallback((groupId: string, name: string) => {
     const group = groups.find(g => g.id === groupId);
     const newId = `asset-${Date.now()}`;
@@ -119,10 +141,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     groups.forEach(group => {
       let groupAssets: Asset[] = [];
       if (group.viewType === 'attribution') {
-        // 归因视角：自动根据标签聚合资产
         groupAssets = assets.filter(a => a.tagIds?.some(tid => group.tagIds?.includes(tid)));
       } else {
-        // 结构视角：手动管理资产列表
         groupAssets = assets.filter(a => group.assetIds.includes(a.id));
       }
 
@@ -146,6 +166,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <AppContext.Provider value={{
       state: { settings, assets, groups, tags, activeView },
       updateSettings, updateAsset, updateAssetTarget, updateGroupTarget, updateGroupTags,
+      createGroup, deleteGroup,
       addAssetToGroup, deleteAssetFromGroup, addTagToAsset, removeTagFromAsset, addAllTagsToAsset,
       createTag, updateTag, deleteTag, setViewMode, isSaving, calculated
     }}>

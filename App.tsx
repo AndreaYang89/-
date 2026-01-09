@@ -8,13 +8,24 @@ import SettingsPanel from './components/SettingsPanel';
 import AnalysisPanel from './components/AnalysisPanel';
 
 const AppContent: React.FC = () => {
-  const { state, setViewMode, calculated } = useApp();
+  const { state, setViewMode, createGroup, calculated } = useApp();
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
+  const [isAddingGroup, setIsAddingGroup] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
 
   const activeGroups = state.groups.filter(g => g.viewType === state.activeView);
   const editingGroup = state.groups.find(g => g.id === editingGroupId);
+
+  const handleCreateGroup = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newGroupName.trim()) {
+      createGroup(newGroupName.trim(), state.activeView);
+      setNewGroupName('');
+      setIsAddingGroup(false);
+    }
+  };
 
   return (
     <div className="min-h-screen pb-20 bg-slate-50">
@@ -87,6 +98,32 @@ const AppContent: React.FC = () => {
             {activeGroups.map(group => (
               <SmartCard key={group.id} group={group} onClick={() => setEditingGroupId(group.id)} />
             ))}
+            
+            {/* Add Group Action */}
+            {!isAddingGroup ? (
+              <button 
+                onClick={() => setIsAddingGroup(true)}
+                className="w-full py-6 rounded-[2rem] border-2 border-dashed border-slate-200 text-slate-400 flex flex-col items-center justify-center gap-1 active:scale-95 transition-all"
+              >
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                <span className="text-[10px] font-black uppercase tracking-widest">新增板块 (Add Group)</span>
+              </button>
+            ) : (
+              <form onSubmit={handleCreateGroup} className="p-6 bg-white rounded-[2rem] border border-indigo-100 shadow-sm animate-in zoom-in-95">
+                <input 
+                  autoFocus
+                  type="text"
+                  value={newGroupName}
+                  onChange={(e) => setNewGroupName(e.target.value)}
+                  placeholder="板块名称, 如: 价值蓝筹..."
+                  className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm font-bold outline-none mb-3"
+                />
+                <div className="flex gap-2">
+                  <button type="submit" className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest">确认添加</button>
+                  <button type="button" onClick={() => setIsAddingGroup(false)} className="px-4 bg-slate-100 text-slate-400 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest">取消</button>
+                </div>
+              </form>
+            )}
           </div>
         </section>
 

@@ -12,7 +12,7 @@ const COLOR_OPTIONS = ['rose', 'blue', 'emerald', 'amber', 'indigo', 'orange', '
 
 const EditorPanel: React.FC<EditorPanelProps> = ({ group, onClose }) => {
   const { 
-    state, updateAsset, updateAssetTarget, updateGroupTarget, updateGroupTags,
+    state, updateAsset, updateAssetTarget, updateGroupTarget, updateGroupTags, deleteGroup,
     addAssetToGroup, deleteAssetFromGroup, addTagToAsset, 
     removeTagFromAsset, addAllTagsToAsset, createTag, updateTag, deleteTag, 
     calculated, isSaving 
@@ -70,12 +70,27 @@ const EditorPanel: React.FC<EditorPanelProps> = ({ group, onClose }) => {
     setShowTagCreator(true);
   };
 
+  const handleDeleteGroup = () => {
+    if (confirm(`确定要删除“${group.name}”板块吗？此操作不可撤销。`)) {
+      deleteGroup(group.id);
+      onClose();
+    }
+  };
+
   return (
     <div className="space-y-8 pb-4">
       {/* 1. Group Strategy Header */}
       <section className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">板块目标设定 (Strategy)</h3>
+          <div className="flex items-center gap-3">
+            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">板块目标设定 (Strategy)</h3>
+            <button 
+              onClick={handleDeleteGroup}
+              className="text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-lg active:scale-95 transition-transform"
+            >
+              删除板块
+            </button>
+          </div>
           <div className="flex flex-col items-end">
             <span className="text-[10px] font-bold text-indigo-500 uppercase">目标金额</span>
             <span className="text-sm font-black text-slate-900">¥{Math.round(metrics.target).toLocaleString()}</span>
