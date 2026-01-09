@@ -4,9 +4,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>AssetWise H5</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>AssetWise H5 - 资产配置诊断</title>
+    <!-- 集成排版插件以支持 AI 报告的富文本显示 -->
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script>
+      // 模拟 process.env 以适配 Gemini SDK 在浏览器环境下的硬性要求
+      window.process = {
+        env: {
+          API_KEY: "" // Vercel 环境变量会自动注入或通过配置获取
+        }
+      };
+
       tailwind.config = {
         safelist: [
           'bg-rose-500', 'bg-rose-100', 'text-rose-700', 'border-rose-200', 'shadow-rose-200',
@@ -16,7 +24,8 @@
           'bg-indigo-500', 'bg-indigo-100', 'text-indigo-700', 'border-indigo-200', 'shadow-indigo-200',
           'bg-orange-500', 'bg-orange-100', 'text-orange-700', 'border-orange-200', 'shadow-orange-200',
           'bg-purple-500', 'bg-purple-100', 'text-purple-700', 'border-purple-200', 'shadow-purple-200',
-          'bg-slate-500', 'bg-slate-100', 'text-slate-700', 'border-slate-200', 'shadow-slate-200'
+          'bg-slate-500', 'bg-slate-100', 'text-slate-700', 'border-slate-200', 'shadow-slate-200',
+          'shadow-indigo-100', 'shadow-slate-200', 'shadow-amber-200', 'bg-emerald-500/20', 'bg-amber-500/20'
         ]
       }
     </script>
@@ -58,19 +67,25 @@
         background: #e2e8f0;
         border-radius: 4px;
       }
+      /* 优化移动端点击态 */
+      .active\:scale-95:active { transform: scale(0.95); }
     </style>
-  <script type="importmap">
+    <script type="importmap">
 {
   "imports": {
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "react/": "https://esm.sh/react@^19.2.3/",
     "react": "https://esm.sh/react@^19.2.3",
-    "@google/genai": "https://esm.sh/@google/genai@^1.35.0"
+    "@google/genai": "https://esm.sh/@google/genai@^1.35.0",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "vite": "https://esm.sh/vite@^7.3.1"
   }
 }
 </script>
-</head>
+  </head>
   <body class="overflow-x-hidden">
     <div id="root"></div>
+    <!-- 显式添加入口脚本引用，确保 Vercel 构建工具能找到项目起点 -->
+    <script type="module" src="./index.tsx"></script>
   </body>
 </html>
