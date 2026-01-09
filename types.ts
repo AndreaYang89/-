@@ -20,7 +20,8 @@ export interface Group {
   name: string;
   description: string;
   targetPercent: number;
-  assetIds: string[];
+  assetIds: string[]; // Explicit membership (used for Structural View)
+  tagIds?: string[];  // Tag-based membership (used for Attribution View)
   themeColor: string;
   viewType: ViewMode;
 }

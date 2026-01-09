@@ -11,6 +11,7 @@ interface AppContextType {
   updateAsset: (id: string, value: number) => void;
   updateAssetTarget: (id: string, targetPercent: number) => void;
   updateGroupTarget: (id: string, targetPercent: number) => void;
+  updateGroupTags: (groupId: string, tagIds: string[]) => void;
   addAssetToGroup: (groupId: string, name: string) => void;
   deleteAssetFromGroup: (groupId: string, assetId: string) => void;
   addTagToAsset: (assetId: string, tagId: string) => void;
@@ -27,7 +28,7 @@ interface AppContextType {
     totalAssets: number;
     plannedTotal: number;
     positionPercent: number;
-    groupMetrics: Record<string, { current: number; target: number; gap: number; completion: number }>;
+    groupMetrics: Record<string, { current: number; target: number; gap: number; completion: number; assets: Asset[] }>;
     tagMetrics: Array<{ id: string; name: string; color: string; value: number; percent: number }>;
   };
 }
@@ -38,12 +39,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const loadSavedState = () => {
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (e) {
-      console.error("Failed to load state from local storage", e);
-    }
+      if (saved) return JSON.parse(saved);
+    } catch (e) { console.error("Failed to load state", e); }
     return null;
   };
 
@@ -53,42 +50,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [assets, setAssets] = useState<Asset[]>(savedState?.assets || INITIAL_ASSETS);
   const [groups, setGroups] = useState<Group[]>(savedState?.groups || INITIAL_GROUPS);
   const [tags, setTags] = useState<Tag[]>(savedState?.tags || INITIAL_TAGS);
-  const [activeView, setViewMode] = useState<ViewMode>('attribution');
+  const [activeView, setViewMode] = useState<ViewMode>(savedState?.activeView || 'attribution');
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     setIsSaving(true);
     const handler = setTimeout(() => {
-      const dataToSave = { settings, assets, groups, tags };
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(dataToSave));
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ settings, assets, groups, tags, activeView }));
       setIsSaving(false);
-    }, 1500);
-
+    }, 1000);
     return () => clearTimeout(handler);
-  }, [settings, assets, groups, tags]);
+  }, [settings, assets, groups, tags, activeView]);
 
-  const updateSettings = useCallback((newSettings: Partial<GlobalSettings>) => {
-    setSettings(prev => ({ ...prev, ...newSettings }));
-  }, []);
-
-  const updateAsset = useCallback((id: string, value: number) => {
-    setAssets(prev => prev.map(a => a.id === id ? { ...a, value } : a));
-  }, []);
-
-  const updateAssetTarget = useCallback((id: string, targetPercent: number) => {
-    setAssets(prev => prev.map(a => a.id === id ? { ...a, targetPercent } : a));
-  }, []);
-
-  const updateGroupTarget = useCallback((id: string, targetPercent: number) => {
-    setGroups(prev => prev.map(g => g.id === id ? { ...g, targetPercent } : g));
-  }, []);
+  const updateSettings = useCallback((newSettings: Partial<GlobalSettings>) => setSettings(prev => ({ ...prev, ...newSettings })), []);
+  const updateAsset = useCallback((id: string, value: number) => setAssets(prev => prev.map(a => a.id === id ? { ...a, value } : a)), []);
+  const updateAssetTarget = useCallback((id: string, targetPercent: number) => setAssets(prev => prev.map(a => a.id === id ? { ...a, targetPercent } : a)), []);
+  const updateGroupTarget = useCallback((id: string, targetPercent: number) => setGroups(prev => prev.map(g => g.id === id ? { ...g, targetPercent } : g)), []);
+  const updateGroupTags = useCallback((groupId: string, tagIds: string[]) => setGroups(prev => prev.map(g => g.id === groupId ? { ...g, tagIds } : g)), []);
 
   const addAssetToGroup = useCallback((groupId: string, name: string) => {
+    const group = groups.find(g => g.id === groupId);
     const newId = `asset-${Date.now()}`;
-    const newAsset: Asset = { id: newId, name, value: 0, targetPercent: 0, tagIds: [] };
+    const newAsset: Asset = { 
+      id: newId, 
+      name, 
+      value: 0, 
+      targetPercent: 0, 
+      tagIds: group?.viewType === 'attribution' ? [...(group.tagIds || [])] : [] 
+    };
     setAssets(prev => [...prev, newAsset]);
-    setGroups(prev => prev.map(g => g.id === groupId ? { ...g, assetIds: [...g.assetIds, newId] } : g));
-  }, []);
+    if (group?.viewType === 'structural') {
+      setGroups(prev => prev.map(g => g.id === groupId ? { ...g, assetIds: [...g.assetIds, newId] } : g));
+    }
+  }, [groups]);
 
   const deleteAssetFromGroup = useCallback((groupId: string, assetId: string) => {
     setGroups(prev => prev.map(g => g.id === groupId ? { ...g, assetIds: g.assetIds.filter(id => id !== assetId) } : g));
@@ -106,18 +100,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAssets(prev => prev.map(a => a.id === assetId ? { ...a, tagIds: tags.map(t => t.id) } : a));
   }, [tags]);
 
-  const createTag = useCallback((name: string, color: string) => {
-    const newTag: Tag = { id: `tag-${Date.now()}`, name, color };
-    setTags(prev => [...prev, newTag]);
-  }, []);
-
-  const updateTag = useCallback((tagId: string, name: string, color: string) => {
-    setTags(prev => prev.map(t => t.id === tagId ? { ...t, name, color } : t));
-  }, []);
-
+  const createTag = useCallback((name: string, color: string) => setTags(prev => [...prev, { id: `tag-${Date.now()}`, name, color }]), []);
+  const updateTag = useCallback((tagId: string, name: string, color: string) => setTags(prev => prev.map(t => t.id === tagId ? { ...t, name, color } : t)), []);
   const deleteTag = useCallback((tagId: string) => {
     setTags(prev => prev.filter(t => t.id !== tagId));
     setAssets(prev => prev.map(a => ({ ...a, tagIds: (a.tagIds || []).filter(id => id !== tagId) })));
+    setGroups(prev => prev.map(g => ({ ...g, tagIds: (g.tagIds || []).filter(id => id !== tagId) })));
   }, []);
 
   const calculated = useMemo(() => {
@@ -129,37 +117,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const groupMetrics: AppContextType['calculated']['groupMetrics'] = {};
     groups.forEach(group => {
-      const current = group.assetIds.reduce((acc, id) => {
-        const asset = assets.find(a => a.id === id);
-        return acc + (asset?.value || 0);
-      }, 0);
-      
+      let groupAssets: Asset[] = [];
+      if (group.viewType === 'attribution') {
+        // 归因视角：自动根据标签聚合资产
+        groupAssets = assets.filter(a => a.tagIds?.some(tid => group.tagIds?.includes(tid)));
+      } else {
+        // 结构视角：手动管理资产列表
+        groupAssets = assets.filter(a => group.assetIds.includes(a.id));
+      }
+
+      const current = groupAssets.reduce((sum, a) => sum + a.value, 0);
       const target = (plannedTotal * group.targetPercent) / 100;
       const gap = target - current;
       const completion = target > 0 ? (current / target) * 100 : 0;
-      groupMetrics[group.id] = { current, target, gap, completion };
+      groupMetrics[group.id] = { current, target, gap, completion, assets: groupAssets };
     });
 
     const tagMetrics = tags.map(tag => {
-      const value = assets.reduce((acc, asset) => {
-        if (asset.tagIds?.includes(tag.id)) return acc + asset.value;
-        return acc;
-      }, 0);
-      const percent = plannedTotal > 0 ? (value / plannedTotal) * 100 : 0;
+      const value = assets.reduce((acc, asset) => asset.tagIds?.includes(tag.id) ? acc + asset.value : acc, 0);
+      const percent = (value / plannedTotal) * 100;
       return { ...tag, value, percent };
     }).sort((a, b) => b.value - a.value);
 
     return { totalCash, totalInvested, totalAssets, plannedTotal, positionPercent, groupMetrics, tagMetrics };
   }, [settings, assets, groups, tags]);
 
-  const value = {
-    state: { settings, assets, groups, tags, activeView },
-    updateSettings, updateAsset, updateAssetTarget, updateGroupTarget,
-    addAssetToGroup, deleteAssetFromGroup, addTagToAsset, removeTagFromAsset, addAllTagsToAsset,
-    createTag, updateTag, deleteTag, setViewMode, isSaving, calculated
-  };
-
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+  return (
+    <AppContext.Provider value={{
+      state: { settings, assets, groups, tags, activeView },
+      updateSettings, updateAsset, updateAssetTarget, updateGroupTarget, updateGroupTags,
+      addAssetToGroup, deleteAssetFromGroup, addTagToAsset, removeTagFromAsset, addAllTagsToAsset,
+      createTag, updateTag, deleteTag, setViewMode, isSaving, calculated
+    }}>
+      {children}
+    </AppContext.Provider>
+  );
 };
 
 export const useApp = () => {
