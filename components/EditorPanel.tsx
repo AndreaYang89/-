@@ -28,6 +28,10 @@ const EditorPanel: React.FC<EditorPanelProps> = ({ group, onClose }) => {
   const groupAssets = metrics.assets;
   const plannedTotal = calculated.plannedTotal || 1;
 
+  // 计算子资产配比合计
+  const totalSubTargetPercent = groupAssets.reduce((sum, asset) => sum + (asset.targetPercent || 0), 0);
+  const isAllocationMismatch = Math.abs(totalSubTargetPercent - group.targetPercent) > 0.01;
+
   const handleAddAsset = (e: React.FormEvent) => {
     e.preventDefault();
     if (newAssetName.trim()) {
@@ -145,7 +149,24 @@ const EditorPanel: React.FC<EditorPanelProps> = ({ group, onClose }) => {
         </section>
       )}
 
-      {/* 3. Tag Hub */}
+      {/* 3. Validation Alert */}
+      {isAllocationMismatch && (
+        <div className="mx-1 p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-start gap-3 animate-pulse shadow-sm shadow-rose-100">
+          <div className="w-8 h-8 rounded-full bg-rose-500 flex items-center justify-center shrink-0">
+            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+          </div>
+          <div>
+            <h4 className="text-xs font-black text-rose-700 uppercase mb-0.5">配比不平衡 (Imbalance)</h4>
+            <p className="text-[10px] font-bold text-rose-500 leading-relaxed">
+              子资产目标配比合计为 <span className="underline decoration-2">{totalSubTargetPercent.toFixed(1)}%</span>，
+              而板块设定的目标配比为 <span className="underline decoration-2">{group.targetPercent.toFixed(1)}%</span>。
+              请调整子资产比例以匹配板块战略。
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* 4. Tag Hub */}
       <section>
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">标签管理中心 (Tag Hub)</h3>
@@ -177,7 +198,7 @@ const EditorPanel: React.FC<EditorPanelProps> = ({ group, onClose }) => {
         </div>
       </section>
 
-      {/* 4. Assets Detail Breakdown */}
+      {/* 5. Assets Detail Breakdown */}
       <section>
         <div className="flex justify-between items-center mb-4 px-1">
           <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">包含资产明细 (Assets)</h3>
@@ -270,16 +291,24 @@ const EditorPanel: React.FC<EditorPanelProps> = ({ group, onClose }) => {
         </div>
       </section>
 
-      {/* 5. Bottom Summary Bar */}
+      {/* 6. Bottom Summary Bar */}
       <section className="bg-slate-900 rounded-[2rem] p-6 shadow-xl text-white">
         <div className="flex justify-between items-center mb-4">
           <div className="space-y-1">
+            <div className="text-[10px] font-bold opacity-50 uppercase tracking-widest flex items-center gap-2">
+              配比对齐情况 
+              <span className={`w-1.5 h-1.5 rounded-full ${isAllocationMismatch ? 'bg-amber-400' : 'bg-emerald-400'}`} />
+            </div>
+            <div className={`text-sm font-black ${isAllocationMismatch ? 'text-amber-400' : 'text-emerald-400'}`}>
+              {totalSubTargetPercent.toFixed(1)}% / {group.targetPercent.toFixed(1)}%
+            </div>
+            <div className="h-px w-full bg-white/10 my-2" />
             <div className="text-[10px] font-bold opacity-50 uppercase">板块总体偏差</div>
             <div className={`text-2xl font-black ${metrics.gap > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
               {metrics.gap > 0 ? '需补 ¥' : '需降 ¥'}{Math.abs(Math.round(metrics.gap)).toLocaleString()}
             </div>
           </div>
-          <button onClick={onClose} className="bg-white text-slate-900 w-14 h-14 rounded-full flex items-center justify-center active:scale-90 transition-transform">
+          <button onClick={onClose} className="bg-white text-slate-900 w-14 h-14 rounded-full flex items-center justify-center active:scale-90 transition-transform shadow-lg">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
           </button>
         </div>
